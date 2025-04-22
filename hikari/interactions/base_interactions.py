@@ -344,6 +344,9 @@ class PartialInteractionMetadata:
     )
     """A mapping of the [applications.ApplicationIntegrationType] to the related guild or user ID."""
 
+    name: str = attrs.field(eq=False, repr=True)
+    """Name of the application command the interaction is tied to."""
+
     original_response_message_id: snowflakes.Snowflake | None = attrs.field(hash=True, repr=True)
     """The ID of the original response message."""
 
