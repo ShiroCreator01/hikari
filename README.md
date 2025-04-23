@@ -20,6 +20,9 @@ development.
 
 Python 3.9, 3.10, 3.11, 3.12 and 3.13 are currently supported.
 
+## What has changed in this fork?
+- Added 'name' to PartialInteractionMetadata ([6e74b28](https://github.com/ShiroCreator01/hikari/commit/6e74b288d360cb34e5f5bfb885fc6237e6e96734))
+
 ## Installation
 
 Install hikari from PyPI with the following command:
