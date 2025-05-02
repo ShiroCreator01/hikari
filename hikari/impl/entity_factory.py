@@ -3478,6 +3478,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             type=partial_message_interaction_metadata.type,
             user=partial_message_interaction_metadata.user,
             authorizing_integration_owners=partial_message_interaction_metadata.authorizing_integration_owners,
+            name=partial_message_interaction_metadata.name,
             original_response_message_id=partial_message_interaction_metadata.original_response_message_id,
             interacted_message_id=snowflakes.Snowflake(payload["interacted_message_id"]),
         )
@@ -3495,6 +3496,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             type=partial_message_interaction_metadata.type,
             user=partial_message_interaction_metadata.user,
             authorizing_integration_owners=partial_message_interaction_metadata.authorizing_integration_owners,
+            name=partial_message_interaction_metadata.name, 
             original_response_message_id=partial_message_interaction_metadata.original_response_message_id,
             triggering_interaction_metadata=triggering_interaction_metadata,
         )
