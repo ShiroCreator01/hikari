@@ -3444,7 +3444,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             type=base_interactions.InteractionType(payload["type"]),
             user=self.deserialize_user(payload["user"]),
             authorizing_integration_owners=authorizing_integration_owners,
-            name=payload["name"],
+            name=payload.get("name"),
             original_response_message_id=snowflakes.Snowflake(payload["original_response_message_id"])
             if "original_response_message_id" in payload
             else None,
