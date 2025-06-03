@@ -26,6 +26,10 @@ Python 3.9, 3.10, 3.11, 3.12 and 3.13 are currently supported.
 ## What has changed in this fork?
 - Added 'name' to PartialInteractionMetadata ([6e74b28](https://github.com/ShiroCreator01/hikari/commit/6e74b288d360cb34e5f5bfb885fc6237e6e96734), [d9594a2](https://github.com/ShiroCreator01/hikari/commit/d9594a2390f61fb22ccb5a3a1cedac1920bb43a8), [03329ec](https://github.com/ShiroCreator01/hikari/commit/03329ecbd6fc0da847c48bd5ebbfe93dc18d9718)), for more information: [hikari@issues#2334](https://github.com/hikari-py/hikari/issues/2334#issuecomment-2833683377)
 
+## Files to monitor for every change
+- [‎hikari/impl/entity_factory.py](https://github.com/ShiroCreator01/hikari/blob/master/hikari/impl/entity_factory.py)
+- [hikari/interactions/base_interactions.py](https://github.com/ShiroCreator01/hikari/blob/master/hikari/interactions/base_interactions.py)
+
 ## Installation
 
 Install hikari from PyPI with the following command:
