@@ -21,7 +21,7 @@ Gateway APIs.
 Built on good intentions and the hope that it will be extendable and reusable, rather than an obstacle for future
 development.
 
-Python 3.9, 3.10, 3.11, 3.12 and 3.13 are currently supported.
+Python 3.10, 3.11, 3.12, 3.13, and 3.14 are currently supported.
 
 ## What has changed in this fork?
 - Added 'name' to PartialInteractionMetadata ([6e74b28](https://github.com/ShiroCreator01/hikari/commit/6e74b288d360cb34e5f5bfb885fc6237e6e96734), [d9594a2](https://github.com/ShiroCreator01/hikari/commit/d9594a2390f61fb22ccb5a3a1cedac1920bb43a8), [03329ec](https://github.com/ShiroCreator01/hikari/commit/03329ecbd6fc0da847c48bd5ebbfe93dc18d9718)), for more information: [hikari@issues#2334](https://github.com/hikari-py/hikari/issues/2334#issuecomment-2833683377)
@@ -47,7 +47,7 @@ Hikari is used in the wild to run some large bots! Here are some examples:
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://invite-tracker.com"><img src="https://cdn.invite-tracker.com/logo.png" width="100px;" height="100px;" alt="Invite Tracker"/><br /><sub><b>Invite Tracker</b></sub></a>
+      <td align="center" valign="top" width="14.28%"><a href="https://invite-tracker.com"><img src="https://invite-tracker.com/og/invitetracker_logo.png" width="100px;" height="100px;" alt="Invite Tracker"/><br /><sub><b>Invite Tracker</b></sub></a>
       <td align="center" valign="top" width="14.28%"><a href="https://nmarkov.xyz"><img src="https://nmarkov.xyz/logo.png" width="100px;" alt="nMarkov"/><br /><sub><b>nMarkov</b></sub></a>
     </tr>
   </tbody>
