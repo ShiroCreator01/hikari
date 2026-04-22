@@ -119,17 +119,6 @@ _X_RATELIMIT_RESET_AFTER_HEADER: typing.Final[str] = sys.intern("X-RateLimit-Res
 _X_RATELIMIT_SCOPE_HEADER: typing.Final[str] = sys.intern("X-RateLimit-Scope")
 _RETRY_ERROR_CODES: typing.Final[frozenset[int]] = frozenset((500, 502, 503, 504))
 _MAX_BACKOFF_DURATION: typing.Final[int] = 16
-_V2_COMPONENT_TYPES: typing.Final[frozenset[components_.ComponentType]] = frozenset(
-    (
-        components_.ComponentType.SECTION,
-        components_.ComponentType.TEXT_DISPLAY,
-        components_.ComponentType.THUMBNAIL,
-        components_.ComponentType.MEDIA_GALLERY,
-        components_.ComponentType.FILE,
-        components_.ComponentType.SEPARATOR,
-        components_.ComponentType.CONTAINER,
-    )
-)
 
 
 class ClientCredentialsStrategy(rest_api.TokenStrategy):
@@ -1423,6 +1412,10 @@ class RESTClientImpl(rest_api.RESTClient):
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_message(response)
 
+    @staticmethod
+    def _filter_web_resources(resources: list[files.Resource[typing.Any]]) -> list[files.Resource[typing.Any]]:
+        return [r for r in resources if not isinstance(r, files.WebResource)]
+
     def _build_message_payload(  # noqa: C901, PLR0912, PLR0915
         self,
         /,
@@ -1501,7 +1494,7 @@ class RESTClientImpl(rest_api.RESTClient):
                 serialized_components = [component_payload]
                 resources.extend(component_attachments)
 
-                if component.type in _V2_COMPONENT_TYPES:
+                if component.type in components_.COMPONENT_V2_TYPES:
                     if flags is undefined.UNDEFINED:
                         flags = 0
                     flags |= messages_.MessageFlag.IS_COMPONENTS_V2
@@ -1516,7 +1509,7 @@ class RESTClientImpl(rest_api.RESTClient):
                     serialized_components.append(component_payload)
                     resources.extend(component_attachments)
 
-                    if comp.type in _V2_COMPONENT_TYPES:
+                    if comp.type in components_.COMPONENT_V2_TYPES:
                         if flags is undefined.UNDEFINED:
                             flags = 0
                         flags |= messages_.MessageFlag.IS_COMPONENTS_V2
@@ -1562,7 +1555,7 @@ class RESTClientImpl(rest_api.RESTClient):
             # is to always upload all attachments specified as `attachments=[]`, no
             # matter if they are the same, but for other resources spread across
             # all the other components/embeds, deduplicate them and only upload them once.
-            final_attachments.extend(list(dict.fromkeys(resources)))
+            final_attachments.extend(list(dict.fromkeys(self._filter_web_resources(resources))))
 
             for f in final_attachments:
                 if edit and isinstance(f, messages_.Attachment):
@@ -3965,6 +3958,16 @@ class RESTClientImpl(rest_api.RESTClient):
     ) -> None:
         route = routes.DELETE_GUILD_ROLE.compile(guild=guild, role=role)
         await self._request(route, reason=reason)
+
+    @typing_extensions.override
+    async def fetch_role_member_counts(
+        self, guild: snowflakes.SnowflakeishOr[guilds.PartialGuild]
+    ) -> typing.Mapping[snowflakes.Snowflake, int]:
+        route = routes.GET_GUILD_ROLE_MEMBER_COUNTS.compile(guild=guild)
+        response = await self._request(route)
+        assert isinstance(response, dict)
+
+        return {snowflakes.Snowflake(role_id): int(count) for (role_id, count) in response.items()}
 
     @typing_extensions.override
     async def estimate_guild_prune_count(
