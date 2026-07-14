@@ -329,6 +329,7 @@ class TestGatewayTransport:
             proxy=proxy_settings.url,
             proxy_headers=proxy_settings.headers,
             url="testing.com",
+            decode_text=False,
             autoclose=False,
         )
         exit_stack.aclose.assert_not_called()
@@ -422,7 +423,7 @@ class TestGatewayBasicTransport:
     @pytest.mark.asyncio
     async def test__receive_and_check(self, transport_impl):
         transport_impl._ws.receive = mock.AsyncMock(
-            return_value=StubResponse(type=aiohttp.WSMsgType.TEXT, data="some text")
+            return_value=StubResponse(type=aiohttp.WSMsgType.TEXT, data=b"some text")
         )
 
         assert await transport_impl._receive_and_check() == b"some text"
