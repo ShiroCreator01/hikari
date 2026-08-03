@@ -396,7 +396,6 @@ DELETE_REACTION_USER: typing.Final[Route] = Route(
 
 # Guilds
 GET_GUILD: typing.Final[Route] = Route(GET, "/guilds/{guild}")
-POST_GUILDS: typing.Final[Route] = Route(POST, "/guilds")
 PATCH_GUILD: typing.Final[Route] = Route(PATCH, "/guilds/{guild}")
 DELETE_GUILD: typing.Final[Route] = Route(DELETE, "/guilds/{guild}")
 
@@ -409,6 +408,8 @@ PUT_GUILD_BAN: typing.Final[Route] = Route(PUT, "/guilds/{guild}/bans/{user}")
 DELETE_GUILD_BAN: typing.Final[Route] = Route(DELETE, "/guilds/{guild}/bans/{user}")
 
 GET_GUILD_BANS: typing.Final[Route] = Route(GET, "/guilds/{guild}/bans")
+
+POST_GUILD_BULK_BAN: typing.Final[Route] = Route(POST, "/guilds/{guild}/bulk-ban")
 
 GET_GUILD_CHANNELS: typing.Final[Route] = Route(GET, "/guilds/{guild}/channels")
 POST_GUILD_CHANNELS: typing.Final[Route] = Route(POST, "/guilds/{guild}/channels")
@@ -509,6 +510,7 @@ DELETE_GUILD_AUTO_MODERATION_RULE: typing.Final[Route] = Route(DELETE, "/guilds/
 
 # Stickers
 GET_STICKER_PACKS: typing.Final[Route] = Route(GET, "/sticker-packs")
+GET_STICKER_PACK: typing.Final[Route] = Route(GET, "/sticker-packs/{sticker_pack}")
 GET_STICKER: typing.Final[Route] = Route(GET, "/stickers/{sticker}")
 
 # Templates

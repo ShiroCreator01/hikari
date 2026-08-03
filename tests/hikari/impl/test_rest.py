@@ -4440,6 +4440,17 @@ class TestRESTClientImplAsync:
             [mock.call({"id": "123"}), mock.call({"id": "456"}), mock.call({"id": "789"})]
         )
 
+    async def test_fetch_sticker_pack(self, rest_client):
+        expected_route = routes.GET_STICKER_PACK.compile(sticker_pack=123)
+        rest_client._request = mock.AsyncMock(return_value={"id": "123"})
+        rest_client._entity_factory.deserialize_sticker_pack = mock.Mock()
+
+        returned = await rest_client.fetch_sticker_pack(StubModel(123))
+        assert returned is rest_client._entity_factory.deserialize_sticker_pack.return_value
+
+        rest_client._request.assert_awaited_once_with(expected_route)
+        rest_client._entity_factory.deserialize_sticker_pack.assert_called_once_with({"id": "123"})
+
     async def test_fetch_sticker_when_guild_sticker(self, rest_client):
         expected_route = routes.GET_STICKER.compile(sticker=123)
         rest_client._request = mock.AsyncMock(return_value={"id": "123", "guild_id": "456"})
@@ -4569,6 +4580,7 @@ class TestRESTClientImplAsync:
     async def test_edit_guild(self, rest_client, file_resource):
         icon_resource = file_resource("icon data")
         splash_resource = file_resource("splash data")
+        discovery_splash_resource = file_resource("discovery splash data")
         banner_resource = file_resource("banner data")
         expected_route = routes.PATCH_GUILD.compile(guild=123)
         expected_json = {
@@ -4578,19 +4590,28 @@ class TestRESTClientImplAsync:
             "explicit_content_filter": 1,
             "afk_timeout": 60,
             "preferred_locale": "en-UK",
+            "system_channel_flags": 1,
+            "description": "a cool guild",
+            "premium_progress_bar_enabled": True,
             "afk_channel_id": "456",
             "owner_id": "789",
             "system_channel_id": "789",
             "rules_channel_id": "987",
             "public_updates_channel_id": "654",
+            "safety_alerts_channel_id": "321",
             "icon": "icon data",
             "splash": "splash data",
+            "discovery_splash": "discovery splash data",
             "banner": "banner data",
             "features": ["COMMUNITY", "RAID_ALERTS_DISABLED"],
         }
         rest_client._request = mock.AsyncMock(return_value={"id": "123"})
 
-        with mock.patch.object(files, "ensure_resource", side_effect=[icon_resource, splash_resource, banner_resource]):
+        with mock.patch.object(
+            files,
+            "ensure_resource",
+            side_effect=[icon_resource, splash_resource, discovery_splash_resource, banner_resource],
+        ):
             result = await rest_client.edit_guild(
                 StubModel(123),
                 name="hikari",
@@ -4602,12 +4623,17 @@ class TestRESTClientImplAsync:
                 icon="icon.png",
                 owner=StubModel(789),
                 splash="splash.png",
+                discovery_splash="discovery_splash.png",
                 banner="banner.png",
                 system_channel=StubModel(789),
+                system_channel_flags=guilds.GuildSystemChannelFlag.SUPPRESS_USER_JOIN,
                 rules_channel=StubModel(987),
                 public_updates_channel=(654),
+                safety_alerts_channel=StubModel(321),
                 preferred_locale="en-UK",
                 features=[guilds.GuildFeature.COMMUNITY, guilds.GuildFeature.RAID_ALERTS_DISABLED],
+                description="a cool guild",
+                premium_progress_bar_enabled=True,
                 reason="hikari best",
             )
             assert result is rest_client._entity_factory.deserialize_rest_guild.return_value
@@ -4629,8 +4655,11 @@ class TestRESTClientImplAsync:
             "system_channel_id": "789",
             "rules_channel_id": "987",
             "public_updates_channel_id": "654",
+            "safety_alerts_channel_id": None,
+            "description": None,
             "icon": None,
             "splash": None,
+            "discovery_splash": None,
             "banner": None,
             "features": ["COMMUNITY", "RAID_ALERTS_DISABLED"],
         }
@@ -4647,12 +4676,15 @@ class TestRESTClientImplAsync:
             icon=None,
             owner=StubModel(789),
             splash=None,
+            discovery_splash=None,
             banner=None,
             system_channel=StubModel(789),
             rules_channel=StubModel(987),
             public_updates_channel=(654),
+            safety_alerts_channel=None,
             preferred_locale="en-UK",
             features=[guilds.GuildFeature.COMMUNITY, guilds.GuildFeature.RAID_ALERTS_DISABLED],
+            description=None,
             reason="hikari best",
         )
         assert result is rest_client._entity_factory.deserialize_rest_guild.return_value
@@ -5631,6 +5663,41 @@ class TestRESTClientImplAsync:
         )
 
         rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason="because i can")
+
+    async def test_bulk_ban_users(self, rest_client):
+        expected_route = routes.POST_GUILD_BULK_BAN.compile(guild=123)
+        expected_json = {"user_ids": ["456", "789"], "delete_message_seconds": 604800}
+        rest_client._request = mock.AsyncMock(return_value={"banned_users": ["456"], "failed_users": ["789"]})
+
+        result = await rest_client.bulk_ban_users(
+            StubModel(123), [StubModel(456), StubModel(789)], delete_message_seconds=604800, reason="because i can"
+        )
+
+        assert result is rest_client._entity_factory.deserialize_bulk_ban_response.return_value
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason="because i can")
+        rest_client._entity_factory.deserialize_bulk_ban_response.assert_called_once_with(
+            rest_client._request.return_value
+        )
+
+    async def test_bulk_ban_users_with_timedelta(self, rest_client):
+        expected_route = routes.POST_GUILD_BULK_BAN.compile(guild=123)
+        expected_json = {"user_ids": ["456"], "delete_message_seconds": 3600.0}
+        rest_client._request = mock.AsyncMock(return_value={"banned_users": ["456"], "failed_users": []})
+
+        await rest_client.bulk_ban_users(
+            StubModel(123), [StubModel(456)], delete_message_seconds=datetime.timedelta(hours=1)
+        )
+
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason=undefined.UNDEFINED)
+
+    async def test_bulk_ban_users_without_optionals(self, rest_client):
+        expected_route = routes.POST_GUILD_BULK_BAN.compile(guild=123)
+        expected_json = {"user_ids": ["456"]}
+        rest_client._request = mock.AsyncMock(return_value={"banned_users": [], "failed_users": ["456"]})
+
+        await rest_client.bulk_ban_users(StubModel(123), [StubModel(456)])
+
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason=undefined.UNDEFINED)
 
     async def test_unban_user(self, rest_client):
         expected_route = routes.DELETE_GUILD_BAN.compile(guild=123, user=456)
