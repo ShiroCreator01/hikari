@@ -1136,8 +1136,40 @@ class TestRESTClientImpl:
             assert rest_client.fetch_members(guild) == stub_iterator
 
             iterator.assert_called_once_with(
-                entity_factory=rest_client._entity_factory, request_call=rest_client._request, guild=guild
+                entity_factory=rest_client._entity_factory,
+                request_call=rest_client._request,
+                guild=guild,
+                first_id=undefined.UNDEFINED,
             )
+
+    def test_fetch_members_when_start_at(self, rest_client):
+        guild = StubModel(123)
+
+        with mock.patch.object(special_endpoints, "MemberIterator") as iterator_cls:
+            iterator = rest_client.fetch_members(guild, start_at=StubModel(65652342134))
+
+        iterator_cls.assert_called_once_with(
+            entity_factory=rest_client._entity_factory,
+            request_call=rest_client._request,
+            guild=guild,
+            first_id="65652342134",
+        )
+        assert iterator is iterator_cls.return_value
+
+    def test_fetch_members_when_datetime_for_start_at(self, rest_client):
+        guild = StubModel(123)
+        start_at = datetime.datetime(2022, 3, 6, 12, 1, 58, 415625, tzinfo=datetime.timezone.utc)
+
+        with mock.patch.object(special_endpoints, "MemberIterator") as iterator_cls:
+            iterator = rest_client.fetch_members(guild, start_at=start_at)
+
+        iterator_cls.assert_called_once_with(
+            entity_factory=rest_client._entity_factory,
+            request_call=rest_client._request,
+            guild=guild,
+            first_id="950000286338908160",
+        )
+        assert iterator is iterator_cls.return_value
 
     def test_kick_member(self, rest_client):
         mock_kick_user = mock.Mock()
@@ -2795,6 +2827,7 @@ class TestRESTClientImplAsync:
             "target_type": invites.TargetType.STREAM,
             "target_user_id": "456",
             "target_application_id": "789",
+            "role_ids": ["135", "246"],
         }
 
         result = await rest_client.create_invite(
@@ -2806,6 +2839,7 @@ class TestRESTClientImplAsync:
             target_type=invites.TargetType.STREAM,
             target_user=StubModel(456),
             target_application=StubModel(789),
+            role_ids=[StubModel(135), StubModel(246)],
             reason="cause why not :)",
         )
 
@@ -4011,6 +4045,17 @@ class TestRESTClientImplAsync:
         rest_client._request.assert_awaited_once_with(expected_route, query={"with_counts": "true"})
         rest_client._entity_factory.deserialize_invite.assert_called_once_with({"code": "Jx4cNGG"})
 
+    async def test_fetch_invite_with_scheduled_event(self, rest_client):
+        expected_route = routes.GET_INVITE.compile(invite_code="Jx4cNGG")
+        rest_client._request = mock.AsyncMock(return_value={"code": "Jx4cNGG"})
+
+        result = await rest_client.fetch_invite("Jx4cNGG", with_counts=False, scheduled_event=StubModel(9494949))
+
+        assert result is rest_client._entity_factory.deserialize_invite.return_value
+        rest_client._request.assert_awaited_once_with(
+            expected_route, query={"with_counts": "false", "guild_scheduled_event_id": "9494949"}
+        )
+
     async def test_delete_invite(self, rest_client):
         input_invite = StubModel()
         input_invite.code = "Jx4cNGG"
@@ -4248,6 +4293,21 @@ class TestRESTClientImplAsync:
             rest_client._request.return_value
         )
         rest_client._request.assert_awaited_once_with(expected_route)
+
+    async def test_fetch_activity_instance(self, rest_client):
+        expected_route = routes.GET_APPLICATION_ACTIVITY_INSTANCE.compile(
+            application=123, instance="i-1276580072400224306-gc-912952092627435520-912954213460484116"
+        )
+        mock_payload = {"instance_id": "i-1276580072400224306-gc-912952092627435520-912954213460484116"}
+        rest_client._request = mock.AsyncMock(return_value=mock_payload)
+
+        result = await rest_client.fetch_activity_instance(
+            StubModel(123), "i-1276580072400224306-gc-912952092627435520-912954213460484116"
+        )
+
+        assert result is rest_client._entity_factory.deserialize_activity_instance.return_value
+        rest_client._request.assert_awaited_once_with(expected_route)
+        rest_client._entity_factory.deserialize_activity_instance.assert_called_once_with(mock_payload)
 
     async def test_authorize_client_credentials_token(self, rest_client):
         expected_route = routes.POST_TOKEN.compile()

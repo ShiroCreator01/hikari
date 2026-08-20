@@ -1312,6 +1312,7 @@ class RESTClientImpl(rest_api.RESTClient):
         target_application: undefined.UndefinedOr[
             snowflakes.SnowflakeishOr[guilds.PartialApplication]
         ] = undefined.UNDEFINED,
+        role_ids: undefined.UndefinedOr[snowflakes.SnowflakeishSequence[guilds.PartialRole]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> invites.InviteWithMetadata:
         route = routes.POST_CHANNEL_INVITES.compile(channel=channel)
@@ -1323,6 +1324,7 @@ class RESTClientImpl(rest_api.RESTClient):
         body.put("target_type", target_type)
         body.put_snowflake("target_user_id", target_user)
         body.put_snowflake("target_application_id", target_application)
+        body.put_snowflake_array("role_ids", role_ids)
         response = await self._request(route, json=body, reason=reason)
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_invite_with_metadata(response)
@@ -2303,10 +2305,19 @@ class RESTClientImpl(rest_api.RESTClient):
         return self._entity_factory.deserialize_gateway_bot_info(response)
 
     @typing_extensions.override
-    async def fetch_invite(self, invite: invites.InviteCode | str, *, with_counts: bool = True) -> invites.Invite:
+    async def fetch_invite(
+        self,
+        invite: invites.InviteCode | str,
+        *,
+        with_counts: bool = True,
+        scheduled_event: undefined.UndefinedOr[
+            snowflakes.SnowflakeishOr[scheduled_events.ScheduledEvent]
+        ] = undefined.UNDEFINED,
+    ) -> invites.Invite:
         route = routes.GET_INVITE.compile(invite_code=invite if isinstance(invite, str) else invite.code)
         query = data_binding.StringMapBuilder()
         query.put("with_counts", with_counts)
+        query.put("guild_scheduled_event_id", scheduled_event)
         response = await self._request(route, query=query)
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_invite(response)
@@ -2554,6 +2565,15 @@ class RESTClientImpl(rest_api.RESTClient):
         response = await self._request(route, json=body)
         assert isinstance(response, list)
         return [self._entity_factory.deserialize_application_connection_metadata_record(r) for r in response]
+
+    @typing_extensions.override
+    async def fetch_activity_instance(
+        self, application: snowflakes.SnowflakeishOr[guilds.PartialApplication], instance_id: str
+    ) -> applications.ActivityInstance:
+        route = routes.GET_APPLICATION_ACTIVITY_INSTANCE.compile(application=application, instance=instance_id)
+        response = await self._request(route)
+        assert isinstance(response, dict)
+        return self._entity_factory.deserialize_activity_instance(response)
 
     @staticmethod
     def _gen_oauth2_token(client: snowflakes.SnowflakeishOr[guilds.PartialApplication], client_secret: str) -> str:
@@ -3726,10 +3746,20 @@ class RESTClientImpl(rest_api.RESTClient):
 
     @typing_extensions.override
     def fetch_members(
-        self, guild: snowflakes.SnowflakeishOr[guilds.PartialGuild]
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        /,
+        *,
+        start_at: undefined.UndefinedOr[snowflakes.SearchableSnowflakeishOr[users_.PartialUser]] = undefined.UNDEFINED,
     ) -> iterators.LazyIterator[guilds.Member]:
+        first_id: undefined.UndefinedOr[str] = undefined.UNDEFINED
+        if isinstance(start_at, datetime.datetime):
+            first_id = str(snowflakes.Snowflake.from_datetime(start_at))
+        elif start_at is not undefined.UNDEFINED:
+            first_id = str(int(start_at))
+
         return special_endpoints_impl.MemberIterator(
-            entity_factory=self._entity_factory, request_call=self._request, guild=guild
+            entity_factory=self._entity_factory, request_call=self._request, guild=guild, first_id=first_id
         )
 
     @typing_extensions.override
