@@ -533,7 +533,11 @@ class Color(int):
 
     @typing_extensions.override
     def to_bytes(
-        self, length: typing.SupportsIndex, byteorder: typing.Literal["little", "big"], *, signed: bool = False
+        self,
+        length: typing.SupportsIndex = 3,
+        byteorder: typing.Literal["little", "big"] = "big",
+        *,
+        signed: bool = False,
     ) -> bytes:
         """Convert the color code to bytes.
 
@@ -541,9 +545,10 @@ class Color(int):
         ----------
         length
             The number of bytes to produce. Should be around `3`, but not less.
+            Defaults to `3`.
         byteorder
             The endianness of the value represented by the bytes.
-            Can be `"big"` endian or `"little"` endian.
+            Can be `"big"` endian or `"little"` endian. Defaults to `"big"`.
         signed
             Whether the value is signed or unsigned.
 
@@ -555,15 +560,15 @@ class Color(int):
         return int(self).to_bytes(length, byteorder, signed=signed)
 
 
-Colorish = typing.Union[
-    Color,
-    typing.SupportsInt,
-    tuple[typing.SupportsInt, typing.SupportsInt, typing.SupportsInt],
-    tuple[typing.SupportsFloat, typing.SupportsFloat, typing.SupportsFloat],
-    typing.Sequence[typing.SupportsInt],
-    typing.Sequence[typing.SupportsFloat],
-    str,
-]
+Colorish = (
+    Color
+    | typing.SupportsInt
+    | tuple[typing.SupportsInt, typing.SupportsInt, typing.SupportsInt]
+    | tuple[typing.SupportsFloat, typing.SupportsFloat, typing.SupportsFloat]
+    | typing.Sequence[typing.SupportsInt]
+    | typing.Sequence[typing.SupportsFloat]
+    | str
+)
 """Type hint representing types of value compatible with a colour type.
 
 This may be:
