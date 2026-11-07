@@ -52,6 +52,9 @@ class TestAttachment:
             is_ephemeral=False,
             duration=1,
             waveform="122111",
+            placeholder=None,
+            placeholder_version=None,
+            flags=messages.AttachmentFlag.NONE,
         )
         assert str(attachment) == "super_cool_file.cool"
 
@@ -120,6 +123,7 @@ def message():
         id=snowflakes.Snowflake(1234),
         channel_id=snowflakes.Snowflake(5678),
         guild_id=snowflakes.Snowflake(910112),
+        channel_type=None,
         author=mock.Mock(spec_set=users.User),
         member=mock.Mock(spec_set=guilds.Member),
         content="blahblahblah",

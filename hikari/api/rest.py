@@ -1659,8 +1659,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         self,
         channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        *,
-        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> None:
         """Delete a given message in a given channel.
 
@@ -1672,9 +1670,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         message
             The message to delete. This may be the object or the ID of
             an existing message.
-        reason
-            If provided, the reason that will be recorded in the audit logs.
-            Maximum of 512 characters.
 
         Raises
         ------
@@ -1739,6 +1734,9 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         reason
             If provided, the reason that will be recorded in the audit logs.
             Maximum of 512 characters.
+
+            Discord does not record a reason for single message deletions,
+            so a chunk with only one message left is deleted without it.
 
         Raises
         ------
@@ -2991,6 +2989,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         *,
         newest_first: bool = False,
         start_at: undefined.UndefinedOr[snowflakes.SearchableSnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
+        shard: undefined.UndefinedOr[int] = undefined.UNDEFINED,
     ) -> iterators.LazyIterator[applications.OwnGuild]:
         """Fetch the token's associated guilds.
 
@@ -3010,6 +3009,12 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             a datetime object, it will be transformed into a snowflake. This
             may also be a guild object. In this case, the
             date the object was first created will be used.
+        shard
+            If provided, only the guilds stored in this shard are returned.
+
+            Apps using large bot sharding must provide this, Discord rejects
+            their requests without it. Valid values go from `0` to
+            `max_concurrency - 1`, which is not the same as the gateway shard ID.
 
         Returns
         -------
@@ -3129,6 +3134,34 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         ------
         hikari.errors.BadRequestError
             If incorrect values are provided or unknown keys are provided in the metadata.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the application is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def delete_my_user_application_role_connection(
+        self, application: snowflakes.SnowflakeishOr[guilds.PartialApplication]
+    ) -> None:
+        """Delete the token's associated role connection.
+
+        !!! note
+            This requires the token to have the
+            [`hikari.applications.OAuth2Scope.ROLE_CONNECTIONS_WRITE`][] scope enabled.
+
+        Parameters
+        ----------
+        application
+            The application to delete the application role connection for.
+
+        Raises
+        ------
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.NotFoundError
@@ -7344,7 +7377,10 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.ForbiddenError
-            If you are missing the [`hikari.permissions.Permissions.KICK_MEMBERS`][] permission.
+            If you are missing the [`hikari.permissions.Permissions.MANAGE_GUILD`][] and
+            [`hikari.permissions.Permissions.KICK_MEMBERS`][] permissions, or the
+            [`hikari.permissions.Permissions.ADMINISTRATOR`][] permission if the guild
+            has the [`hikari.guilds.GuildFeature.PRUNE_REQUIRES_ADMIN`][] feature.
         hikari.errors.NotFoundError
             If the guild is not found.
         hikari.errors.RateLimitTooLongError
@@ -7398,7 +7434,10 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.ForbiddenError
-            If you are missing the [`hikari.permissions.Permissions.KICK_MEMBERS`][] permission.
+            If you are missing the [`hikari.permissions.Permissions.MANAGE_GUILD`][] and
+            [`hikari.permissions.Permissions.KICK_MEMBERS`][] permissions, or the
+            [`hikari.permissions.Permissions.ADMINISTRATOR`][] permission if the guild
+            has the [`hikari.guilds.GuildFeature.PRUNE_REQUIRES_ADMIN`][] feature.
         hikari.errors.NotFoundError
             If the guild is not found.
         hikari.errors.RateLimitTooLongError

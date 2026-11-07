@@ -1894,11 +1894,9 @@ class RESTClientImpl(rest_api.RESTClient):
         self,
         channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        *,
-        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> None:
         route = routes.DELETE_CHANNEL_MESSAGE.compile(channel=channel, message=message)
-        await self._request(route, reason=reason)
+        await self._request(route)
 
     @typing_extensions.override
     async def delete_messages(
@@ -1945,7 +1943,7 @@ class RESTClientImpl(rest_api.RESTClient):
                 if len(chunk) == 1:
                     message = chunk[0]
                     try:
-                        await self.delete_message(channel, message, reason=reason)
+                        await self.delete_message(channel, message)
                     except errors.NotFoundError as ex:
                         # If the message is not found then this error should be suppressed
                         # to keep consistency with how the bulk delete endpoint functions.
@@ -2432,6 +2430,7 @@ class RESTClientImpl(rest_api.RESTClient):
         *,
         newest_first: bool = False,
         start_at: undefined.UndefinedOr[snowflakes.SearchableSnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
+        shard: undefined.UndefinedOr[int] = undefined.UNDEFINED,
     ) -> iterators.LazyIterator[applications.OwnGuild]:
         if start_at is undefined.UNDEFINED:
             start_at = snowflakes.Snowflake.max() if newest_first else snowflakes.Snowflake.min()
@@ -2441,6 +2440,7 @@ class RESTClientImpl(rest_api.RESTClient):
             request_call=self._request,
             newest_first=newest_first,
             first_id=_to_searchable_snowflake_str(start_at),
+            shard=shard,
         )
 
     @typing_extensions.override
@@ -2488,6 +2488,13 @@ class RESTClientImpl(rest_api.RESTClient):
         response = await self._request(route, json=body)
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_own_application_role_connection(response)
+
+    @typing_extensions.override
+    async def delete_my_user_application_role_connection(
+        self, application: snowflakes.SnowflakeishOr[guilds.PartialApplication]
+    ) -> None:
+        route = routes.DELETE_MY_USER_APPLICATION_ROLE_CONNECTIONS.compile(application=application)
+        await self._request(route)
 
     @typing_extensions.override
     async def create_dm_channel(self, user: snowflakes.SnowflakeishOr[users_.PartialUser], /) -> channels_.DMChannel:
@@ -3815,7 +3822,7 @@ class RESTClientImpl(rest_api.RESTClient):
         builder = special_endpoints_impl.ChannelRepositioner(guild=guild, request_call=self._request, reason=reason)
         if positions is not undefined.UNDEFINED:
             for pos, channel in positions.items():
-                builder.add_reposition_channel(position=pos, channel=channel)
+                builder.add_reposition_channel(channel, position=pos)
         return builder
 
     @typing_extensions.override

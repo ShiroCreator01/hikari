@@ -243,6 +243,13 @@ class OAuth2Scope(str, enums.Enum):
     CONNECTIONS = "connections"
     """Enables viewing third-party linked accounts such as Twitch."""
 
+    DM_CHANNELS_READ = "dm_channels.read"
+    """Enables viewing information about the user's DMs and group DMs.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
     EMAIL = "email"
     """Enable the application to view the user's email and application info."""
 
@@ -271,6 +278,13 @@ class OAuth2Scope(str, enums.Enum):
         to retrieve this information.
     """
 
+    IDENTIFY_PREMIUM = "identify.premium"
+    """Enables viewing the user's Nitro subscription type through [`hikari.users.OwnUser.premium_type`][].
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
     RELATIONSHIPS_READ = "relationships.read"
     """Enables viewing a user's friend list.
 
@@ -285,11 +299,39 @@ class OAuth2Scope(str, enums.Enum):
         You must be whitelisted to use this scope.
     """
 
+    RPC_ACTIVITIES_WRITE = "rpc.activities.write"
+    """Enables the RPC application to update the user's activity.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
     RPC_MESSAGES_READ = "messages.read"
     """Enables the RPC application to read messages from all channels the user is in."""
 
     RPC_NOTIFICATIONS_READ = "rpc.notifications.read"
-    """Enables the RPC application to read  from all channels the user is in.
+    """Enables the RPC application to receive notifications pushed out to the user.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
+    RPC_VOICE_READ = "rpc.voice.read"
+    """Enables the RPC application to read the user's voice settings and listen for voice events.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
+    RPC_VOICE_WRITE = "rpc.voice.write"
+    """Enables the RPC application to update the user's voice settings.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
+    VOICE = "voice"
+    """Enables connecting to voice on the user's behalf and seeing all the voice members.
 
     !!! note
         You must be whitelisted to use this scope.
@@ -792,6 +834,12 @@ class Application(guilds.PartialApplication):
 
     If the application is not part of a team, this will be [`None`][].
     """
+
+    guild_id: snowflakes.Snowflake | None = attrs.field(eq=False, hash=False, repr=False)
+    """The ID of the guild associated with this application, such as its developer support server."""
+
+    guild: guilds.PartialGuild | None = attrs.field(eq=False, hash=False, repr=False)
+    """The guild associated with this application, such as its developer support server."""
 
     cover_image_hash: str | None = attrs.field(eq=False, hash=False, repr=False)
     """The CDN's hash of this application's default rich presence invite cover image."""

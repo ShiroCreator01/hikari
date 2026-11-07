@@ -308,7 +308,7 @@ def member_presence_payload(user_payload, presence_activity_payload):
         "guild_id": "44004040",
         "status": "dnd",
         "activities": [presence_activity_payload],
-        "client_status": {"desktop": "online", "mobile": "idle", "web": "dnd"},
+        "client_status": {"desktop": "online", "mobile": "idle", "web": "dnd", "vr": "online"},
     }
 
 
@@ -1001,6 +1001,7 @@ class TestEntityFactoryImpl:
             "owner": owner_payload,
             "verify_key": "698c5d0859abb686be1f8a19e0e7634d8471e33817650f9fb29076de227bca90",
             "flags": 65536,
+            "flags_new": "2147549184",
             "team": {
                 "icon": "hashtag",
                 "id": "202020202",
@@ -1026,6 +1027,8 @@ class TestEntityFactoryImpl:
             "event_webhooks_url": "https://eventme.com",
             "event_webhooks_status": 2,
             "event_webhooks_types": ["APPLICATION_AUTHORIZED"],
+            "guild_id": "4949494949",
+            "guild": {"id": "4949494949", "name": "Hikari Support", "icon": "supporticon"},
         }
 
     def test_deserialize_application(
@@ -1045,7 +1048,8 @@ class TestEntityFactoryImpl:
             application.public_key
             == b'i\x8c]\x08Y\xab\xb6\x86\xbe\x1f\x8a\x19\xe0\xe7cM\x84q\xe38\x17e\x0f\x9f\xb2\x90v\xde"{\xca\x90'
         )
-        assert application.flags == application_models.ApplicationFlags.VERIFICATION_PENDING_GUILD_LIMIT
+        assert application.flags == application_models.ApplicationFlags(2147549184)
+        assert application_models.ApplicationFlags.VERIFICATION_PENDING_GUILD_LIMIT in application.flags
         assert application.privacy_policy_url == "hahaha://hahaha"
         assert application.terms_of_service_url == "haha2:2h2h2h2"
         assert application.role_connections_verification_url == "https://verifymethis.com"
@@ -1102,6 +1106,12 @@ class TestEntityFactoryImpl:
         assert application.event_webhooks_types == [
             application_models.ApplicationEventWebhookType.APPLICATION_AUTHORIZED
         ]
+        assert application.guild_id == 4949494949
+        assert application.guild.app is mock_app
+        assert application.guild.id == 4949494949
+        assert application.guild.name == "Hikari Support"
+        assert application.guild.icon_hash == "supporticon"
+        assert isinstance(application.guild, guild_models.PartialGuild)
         assert isinstance(application, application_models.Application)
 
     def test_deserialize_application_with_unset_fields(self, entity_factory_impl, mock_app, owner_payload):
@@ -1114,6 +1124,7 @@ class TestEntityFactoryImpl:
                 "bot_require_code_grant": False,
                 "verify_key": "1232313223",
                 "flags": 0,
+                "flags_new": "0",
                 "owner": owner_payload,
                 "approximate_guild_count": 10000,
                 "approximate_user_install_count": 10001,
@@ -1130,6 +1141,24 @@ class TestEntityFactoryImpl:
         assert application.event_webhooks_url is None
         assert application.event_webhooks_status is application_models.ApplicationEventWebhookStatus.DISABLED
         assert application.event_webhooks_types == []
+        assert application.guild_id is None
+        assert application.guild is None
+
+    def test_deserialize_application_with_only_guild(self, entity_factory_impl, application_payload):
+        del application_payload["guild_id"]
+
+        application = entity_factory_impl.deserialize_application(application_payload)
+
+        assert application.guild_id == 4949494949
+        assert application.guild.id == 4949494949
+
+    def test_deserialize_application_with_only_guild_id(self, entity_factory_impl, application_payload):
+        del application_payload["guild"]
+
+        application = entity_factory_impl.deserialize_application(application_payload)
+
+        assert application.guild_id == 4949494949
+        assert application.guild is None
 
     def test_deserialize_application_with_null_fields(self, entity_factory_impl, mock_app, owner_payload):
         application = entity_factory_impl.deserialize_application(
@@ -1144,6 +1173,7 @@ class TestEntityFactoryImpl:
                 "bot_require_code_grant": False,
                 "verify_key": "1232313223",
                 "flags": 0,
+                "flags_new": "0",
                 "approximate_guild_count": 10000,
                 "approximate_user_install_count": 10001,
                 "event_webhooks_url": None,
@@ -1473,6 +1503,19 @@ class TestEntityFactoryImpl:
         assert isinstance(overwrite_entry_info, audit_log_models.ChannelOverwriteEntryInfo)
 
     @pytest.fixture
+    def channel_position_update_info_payload(self):
+        return {"count": "42"}
+
+    def test__deserialize_channel_position_update_entry_info(
+        self, entity_factory_impl, channel_position_update_info_payload
+    ):
+        channel_position_update_entry_info = entity_factory_impl._deserialize_channel_position_update_entry_info(
+            channel_position_update_info_payload
+        )
+        assert channel_position_update_entry_info.count == 42
+        assert isinstance(channel_position_update_entry_info, audit_log_models.ChannelPositionUpdateEntryInfo)
+
+    @pytest.fixture
     def message_pin_info_payload(self):
         return {"channel_id": "123123123", "message_id": "69696969"}
 
@@ -1534,6 +1577,17 @@ class TestEntityFactoryImpl:
         member_move_entry_info = entity_factory_impl._deserialize_member_move_entry_info(member_move_info_payload)
         assert member_move_entry_info.channel_id == 22222222
         assert isinstance(member_move_entry_info, audit_log_models.MemberMoveEntryInfo)
+
+    @pytest.fixture
+    def role_position_update_info_payload(self):
+        return {"count": "42"}
+
+    def test__deserialize_role_position_update_entry_info(self, entity_factory_impl, role_position_update_info_payload):
+        role_position_update_entry_info = entity_factory_impl._deserialize_role_position_update_entry_info(
+            role_position_update_info_payload
+        )
+        assert role_position_update_entry_info.count == 42
+        assert isinstance(role_position_update_entry_info, audit_log_models.RolePositionUpdateEntryInfo)
 
     @pytest.fixture
     def voice_channel_status_create_info_payload(self):
@@ -2950,15 +3004,24 @@ class TestEntityFactoryImpl:
                 "proxy_url": "https://media.somewhere.com/image.png",
                 "height": 122,
                 "width": 133,
+                "placeholder": "image thumbhash",
+                "placeholder_version": 1,
+                "flags": 32,
             },
             "thumbnail": {
                 "url": "https://somewhere.com/thumbnail.png",
                 "proxy_url": "https://media.somewhere.com/thumbnail.png",
                 "height": 123,
                 "width": 456,
+                "placeholder": "thumbnail thumbhash",
+                "placeholder_version": 1,
+                "flags": 32,
             },
             "video": {
                 "url": "https://somewhere.com/video.mp4",
+                "placeholder": "video thumbhash",
+                "placeholder_version": 1,
+                "flags": 32,
                 "height": 1234,
                 "width": 4567,
                 "proxy_url": "https://somewhere.com/proxy/video.mp4",
@@ -2971,11 +3034,16 @@ class TestEntityFactoryImpl:
                 "proxy_icon_url": "https://media.somewhere.com/author.png",
             },
             "fields": [{"name": "title", "value": "some value", "inline": True}],
+            "flags": 48,
         }
 
     def test_deserialize_embed_with_full_embed(self, entity_factory_impl, embed_payload):
         embed = entity_factory_impl.deserialize_embed(embed_payload)
         assert embed.title == "embed title"
+        assert (
+            embed.flags
+            == embed_models.EmbedFlag.CONTAINS_EXPLICIT_CONTENT | embed_models.EmbedFlag.IS_CONTENT_INVENTORY_ENTRY
+        )
         assert embed.description == "embed description"
         assert embed.url == "https://somewhere.com"
         assert embed.timestamp == datetime.datetime(2020, 3, 22, 16, 40, 39, 218000, tzinfo=datetime.UTC)
@@ -2991,18 +3059,27 @@ class TestEntityFactoryImpl:
         assert embed.image.proxy_resource.url == "https://media.somewhere.com/image.png"
         assert embed.image.height == 122
         assert embed.image.width == 133
+        assert embed.image.placeholder == "image thumbhash"
+        assert embed.image.placeholder_version == 1
+        assert embed.image.flags == embed_models.EmbedMediaFlag.IS_ANIMATED
         assert isinstance(embed.image, embed_models.EmbedImage)
         # EmbedThumbnail
         assert embed.thumbnail.resource.url == "https://somewhere.com/thumbnail.png"
         assert embed.thumbnail.proxy_resource.url == "https://media.somewhere.com/thumbnail.png"
         assert embed.thumbnail.height == 123
         assert embed.thumbnail.width == 456
+        assert embed.thumbnail.placeholder == "thumbnail thumbhash"
+        assert embed.thumbnail.placeholder_version == 1
+        assert embed.thumbnail.flags == embed_models.EmbedMediaFlag.IS_ANIMATED
         assert isinstance(embed.thumbnail, embed_models.EmbedImage)
         # EmbedVideo
         assert embed.video.resource.url == "https://somewhere.com/video.mp4"
         assert embed.video.proxy_resource.url == "https://somewhere.com/proxy/video.mp4"
         assert embed.video.height == 1234
         assert embed.video.width == 4567
+        assert embed.video.placeholder == "video thumbhash"
+        assert embed.video.placeholder_version == 1
+        assert embed.video.flags == embed_models.EmbedMediaFlag.IS_ANIMATED
         assert isinstance(embed.video, embed_models.EmbedVideo)
         # EmbedProvider
         assert embed.provider.name == "some name"
@@ -3147,6 +3224,7 @@ class TestEntityFactoryImpl:
                 fields=[embed_models.EmbedField(value="VALUE", name="NAME", inline=True)],
                 provider=None,
                 video=embed_models.EmbedVideo(resource=video_icon),
+                flags=embed_models.EmbedFlag.NONE,
             )
         )
 
@@ -3201,6 +3279,7 @@ class TestEntityFactoryImpl:
                     resource=embed_models.EmbedResource(resource=files.URL("http://foobar.com"))
                 ),
                 provider=embed_models.EmbedProvider(name="I said nya"),
+                flags=embed_models.EmbedFlag.NONE,
             )
         )
 
@@ -3239,6 +3318,7 @@ class TestEntityFactoryImpl:
                 fields=None,
                 image=None,
                 thumbnail=None,
+                flags=embed_models.EmbedFlag.NONE,
             )
         )
         assert payload == {
@@ -4742,6 +4822,7 @@ class TestEntityFactoryImpl:
         assert channel.id == 695382395666300958
         assert channel.name == "discord-announcements"
         assert channel.permissions == permission_models.Permissions(17179869183)
+        assert channel.app_permissions == permission_models.Permissions(442368)
         assert isinstance(channel, base_interactions.InteractionChannel)
         assert len(resolved.members) == 1
         member = resolved.members[115590097100865541]
@@ -4759,6 +4840,16 @@ class TestEntityFactoryImpl:
         assert resolved.messages == {123: entity_factory_impl.deserialize_message(message_payload)}
 
         assert isinstance(resolved, base_interactions.ResolvedOptionData)
+
+    def test__deserialize_interaction_channel_with_unset_fields(self, entity_factory_impl):
+        channel = entity_factory_impl._deserialize_interaction_channel(
+            {"id": "695382395666300958", "name": "discord-announcements", "type": 0}
+        )
+
+        assert channel.permissions == permission_models.Permissions.NONE
+        assert channel.app_permissions is None
+        assert channel.parent_id is None
+        assert channel.thread_metadata is None
 
     def test__deserialize_resolved_option_data_with_empty_resolved_resources(self, entity_factory_impl):
         resolved = entity_factory_impl._deserialize_resolved_option_data({})
@@ -4781,6 +4872,7 @@ class TestEntityFactoryImpl:
                     "id": "695382395666300958",
                     "name": "discord-announcements",
                     "permissions": "17179869183",
+                    "app_permissions": "442368",
                     "type": 0,
                 }
             },
@@ -6196,6 +6288,10 @@ class TestEntityFactoryImpl:
             "height": 1904,
             "content_type": "ooga/booga",
             "loading_state": 2,
+            "placeholder": "a thumbhash",
+            "placeholder_version": 1,
+            "flags": 1,
+            "content_scan_metadata": {"flags": 5},
         }
 
     @pytest.fixture
@@ -6230,7 +6326,7 @@ class TestEntityFactoryImpl:
 
     @pytest.fixture
     def file_payload(self, media_payload):
-        return {"type": 13, "id": 2407385, "file": media_payload, "spoiler": False}
+        return {"type": 13, "id": 2407385, "file": media_payload, "spoiler": False, "name": "file.txt", "size": 1234}
 
     @pytest.fixture
     def container_payload(self, file_payload):
@@ -6248,11 +6344,21 @@ class TestEntityFactoryImpl:
         assert media.height == 1904
         assert media.content_type == "ooga/booga"
         assert media.loading_state == component_models.MediaLoadingType.LOADED_SUCCESS
+        assert media.placeholder == "a thumbhash"
+        assert media.placeholder_version == 1
+        assert media.flags == component_models.MediaResourceFlag.IS_ANIMATED
+        assert media.content_scan_flags == (
+            component_models.ContentScanFlag.IS_EXPLICIT_CONTENT | component_models.ContentScanFlag.IS_SELF_HARM_CONTENT
+        )
 
         assert isinstance(media, component_models.MediaResource)
 
     def test__deserialize_media_with_unset_fields(self, entity_factory_impl, media_payload):
         del media_payload["proxy_url"]
+        del media_payload["placeholder"]
+        del media_payload["placeholder_version"]
+        del media_payload["flags"]
+        del media_payload["content_scan_metadata"]
         del media_payload["width"]
         del media_payload["height"]
         del media_payload["content_type"]
@@ -6265,6 +6371,10 @@ class TestEntityFactoryImpl:
         assert media.height is undefined.UNDEFINED
         assert media.content_type is undefined.UNDEFINED
         assert media.loading_state is undefined.UNDEFINED
+        assert media.placeholder is undefined.UNDEFINED
+        assert media.placeholder_version is undefined.UNDEFINED
+        assert media.flags is undefined.UNDEFINED
+        assert media.content_scan_flags is undefined.UNDEFINED
 
         assert isinstance(media, component_models.MediaResource)
 
@@ -6400,15 +6510,21 @@ class TestEntityFactoryImpl:
         assert file.id == 2407385
         assert file.file == entity_factory_impl._deserialize_media(media_payload)
         assert file.is_spoiler is False
+        assert file.name == "file.txt"
+        assert file.size == 1234
 
         assert isinstance(file, component_models.FileComponent)
 
     def test__deserialize_file_component_with_unset_fields(self, entity_factory_impl, file_payload):
         del file_payload["spoiler"]
+        del file_payload["name"]
+        del file_payload["size"]
 
         file = entity_factory_impl._deserialize_file_component(file_payload)
 
         assert file.is_spoiler is False
+        assert file.name is None
+        assert file.size is None
 
     def test__deserialize_container_component(self, entity_factory_impl, container_payload, file_payload):
         container = entity_factory_impl._deserialize_container_component(container_payload)
@@ -6601,6 +6717,9 @@ class TestEntityFactoryImpl:
             "ephemeral": True,
             "duration_secs": 1000.123,
             "waveform": "some encoded string",
+            "placeholder": "a thumbhash",
+            "placeholder_version": 1,
+            "flags": 40,
         }
 
     @pytest.fixture
@@ -6638,6 +6757,7 @@ class TestEntityFactoryImpl:
         return {
             "id": "123",
             "channel_id": "456",
+            "channel_type": 0,
             "guild_id": "678",
             "author": user_payload,
             "member": member_payload,
@@ -6700,6 +6820,9 @@ class TestEntityFactoryImpl:
         assert attachment.is_ephemeral is True
         assert attachment.duration == 1000.123
         assert attachment.waveform == "some encoded string"
+        assert attachment.placeholder == "a thumbhash"
+        assert attachment.placeholder_version == 1
+        assert attachment.flags == message_models.AttachmentFlag.IS_SPOILER | message_models.AttachmentFlag.IS_ANIMATED
         assert isinstance(attachment, message_models.Attachment)
 
     def test__deserialize_message_attachment_with_null_fields(self, entity_factory_impl, attachment_payload):
@@ -6721,6 +6844,9 @@ class TestEntityFactoryImpl:
         del attachment_payload["ephemeral"]
         del attachment_payload["duration_secs"]
         del attachment_payload["waveform"]
+        del attachment_payload["placeholder"]
+        del attachment_payload["placeholder_version"]
+        del attachment_payload["flags"]
 
         attachment = entity_factory_impl._deserialize_message_attachment(attachment_payload)
 
@@ -6732,6 +6858,9 @@ class TestEntityFactoryImpl:
         assert attachment.is_ephemeral is False
         assert attachment.duration is None
         assert attachment.waveform is None
+        assert attachment.placeholder is None
+        assert attachment.placeholder_version is None
+        assert attachment.flags == message_models.AttachmentFlag.NONE
 
     def test__deserialize_partial_message_interaction_metadata(
         self, entity_factory_impl, partial_interaction_metadata_payload, user_payload
@@ -7172,6 +7301,7 @@ class TestEntityFactoryImpl:
         assert message.app is mock_app
         assert message.id == 123
         assert message.channel_id == 456
+        assert message.channel_type is channel_models.ChannelType.GUILD_TEXT
         assert message.guild_id == 678
         assert message.author == entity_factory_impl.deserialize_user(user_payload)
         assert message.member == entity_factory_impl.deserialize_member(
@@ -7358,6 +7488,7 @@ class TestEntityFactoryImpl:
         message = entity_factory_impl.deserialize_message(message_payload)
         assert message.app is mock_app
         assert message.content is None
+        assert message.channel_type is None
         assert message.guild_id is None
         assert message.member is None
         assert message.edited_timestamp is None
@@ -7506,6 +7637,7 @@ class TestEntityFactoryImpl:
         assert presence.client_status.desktop == presence_models.Status.ONLINE
         assert presence.client_status.mobile == presence_models.Status.IDLE
         assert presence.client_status.web == presence_models.Status.DO_NOT_DISTURB
+        assert presence.client_status.vr == presence_models.Status.ONLINE
         assert isinstance(presence.client_status, presence_models.ClientStatus)
 
         assert activity.buttons == ["owo", "no"]
@@ -7529,6 +7661,7 @@ class TestEntityFactoryImpl:
         assert presence.client_status.desktop is presence_models.Status.OFFLINE
         assert presence.client_status.mobile is presence_models.Status.OFFLINE
         assert presence.client_status.web is presence_models.Status.OFFLINE
+        assert presence.client_status.vr is presence_models.Status.OFFLINE
 
     def test_deserialize_member_presence_with_unset_activity_fields(self, entity_factory_impl, user_payload):
         presence = entity_factory_impl.deserialize_member_presence(
@@ -8760,10 +8893,18 @@ class TestEntityFactoryImpl:
         assert poll.results is None
 
     def test_deserialize_auto_mod_action_for_block_message(self, entity_factory_impl):
-        result = entity_factory_impl.deserialize_auto_mod_action({"type": 1})
+        result = entity_factory_impl.deserialize_auto_mod_action(
+            {"type": 1, "metadata": {"custom_message": "Please keep it civil"}}
+        )
 
         assert result.type is auto_mod_models.AutoModActionType.BLOCK_MESSAGE
+        assert result.custom_message == "Please keep it civil"
         assert isinstance(result, auto_mod_models.AutoModBlockMessage)
+
+    def test_deserialize_auto_mod_action_for_block_message_with_unset_fields(self, entity_factory_impl):
+        result = entity_factory_impl.deserialize_auto_mod_action({"type": 1})
+
+        assert result.custom_message is None
 
     def test_deserialize_auto_mod_action_for_send_alert_message(self, entity_factory_impl):
         result = entity_factory_impl.deserialize_auto_mod_action({"type": 2, "metadata": {"channel_id": "43123123"}})
