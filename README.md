@@ -31,6 +31,7 @@ Python 3.11, 3.12, 3.13, 3.14, and 3.15 are currently supported.
         # Get the name of the slash command for the message sent, if present (bot only)
         slash_command: str | None = event.message.interaction_metadata.name
     ```
+- If you want to use hikari-lightbulb, I'd recommend using my fork (https://github.com/ShiroCreator01/hikari-lightbulb). I always use the dev versions of both, so I make sure they're compatible with each other's latest dev version
 
 ## Files to monitor for every change
 - [‎hikari/impl/entity_factory.py](https://github.com/ShiroCreator01/hikari/blob/master/hikari/impl/entity_factory.py)
@@ -38,12 +39,12 @@ Python 3.11, 3.12, 3.13, 3.14, and 3.15 are currently supported.
 
 ## Installation
 
-Install hikari from PyPI with the following command:
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Hikari.
 
 ```bash
-python -m pip install -U hikari
+python -m pip install -U git+https://github.com/ShiroCreator01/hikari.git
 # Windows users may need to run this instead...
-py -3 -m pip install -U hikari
+py -3 -m pip install -U git+https://github.com/ShiroCreator01/hikari.git
 ```
 
 ## Large bots
@@ -294,7 +295,7 @@ other internal settings in the interpreter.
 ### `hikari[speedups]`
 
 If you have a C compiler (Microsoft VC++ Redistributable 14.0 or newer, or a modern copy of GCC/G++, Clang, etc), it is
-recommended you install Hikari using `pip install -U hikari[speedups]`. This will install `aiohttp` with its available
+recommended you install Hikari using `pip install -U hikari[speedups]@git+https://github.com/ShiroCreator01/hikari.git`. This will install `aiohttp` with its available
 speedups, `ciso8601` and `orjson` which will provide you with a substantial performance boost.
 
 ### `uvloop`
